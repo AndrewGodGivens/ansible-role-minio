@@ -4,10 +4,6 @@
   set_fact:
     _minio_client_download_url: "https://dl.minio.io/client/mc/release/linux-{{ go_arch }}/mc"
 
-- name: Get the Minio client checksum for architecture {{ go_arch }}
-  set_fact:
-    _minio_client_checksum: "{{ lookup('url', _minio_client_download_url + '.sha256sum').split(' ')[0] }}"
-
 - name: Download the Minio client
   get_url:
     url: "{{ _minio_client_download_url }}"
@@ -15,7 +11,6 @@
     owner: "root"
     group: "root"
     mode: 0755
-    checksum: "sha256:{{ _minio_client_checksum }}"
   register: _download_client
   until: _download_client is succeeded
   retries: 5

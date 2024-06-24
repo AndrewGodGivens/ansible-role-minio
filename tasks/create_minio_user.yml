@@ -34,3 +34,4 @@
   register: apply_policy
   when: create_policy.changed
   changed_when: '"Policy `" + user.name + "` is set on user `" + user.name + "`" in apply_policy.stdout'
+  failed_when: "apply_policy is failed and 'mc: <ERROR> Unable to make user/group policy association. The specified policy change is already in effect. (Specified policy update has no net effect).' not in apply_policy.stderr"

@@ -4,8 +4,8 @@ minio_install_server: true
 minio_install_client: true
 
 # minio unix user
-minio_group: minio
-minio_user: minio
+minio_group: root
+minio_user: root
 
 # minio data directories
 minio_server_make_datadirs: true
@@ -40,7 +40,7 @@ minio_server_env_extra: ""
 minio_server_opts: ""
 
 # Minio server url
-minio_url: ""
+minio_url: "http://{{ minio_server_addr }}:{{ minio_server_port }}"
 
 # Minio credentials user and password
 minio_root_user: ""
@@ -58,14 +58,6 @@ minio_buckets: []
 #    policy: private
 #    object_lock: false
 
-# Replication Sites
-replication_sites: []
-# replication_sites:
-#     - name: myminio2
-#       url: ""
-#       admin_user: ""
-#       admin_password: ""
-
 minio_users: []
 # minio_users:
 #  - name: user1
@@ -81,3 +73,8 @@ prometheus_bearer_token_output: "{{ minio_etc_dir }}/prometheus_bearer.json"
 
 # Environment variables to use when calling Pip
 minio_pip_environment_vars: {}
+
+# Environment variables for swarm
+minio_swarm_project: minio
+minio_swarm_stack: minio
+minio_docker_image: "docker.io/bitnami/minio:latest"
