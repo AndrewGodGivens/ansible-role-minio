@@ -1,7 +1,7 @@
 Ansible Role: Minio Server Installation and Configuration
 =========
 
-This role install and configure [Minio](http://min.io) in a linux server.
+This role install and configure [Minio](http://min.io) in a linux server by docker swarm.
 
 
 Requirements
@@ -24,8 +24,8 @@ Available variables are listed below along with default values (see `defaults\ma
 
   Minio UNIX user/group
   ```yml
-  minio_group: minio
-  minio_user: minio
+  minio_group: root
+  minio_user: root
   ```
   Minio installation directories to place server configuration (`minio_etc_dir`), TLS certificates (`minio_cert_dir`) and user access policies (`minio_policy_dir`)
   ```yml
@@ -59,30 +59,6 @@ Available variables are listed below along with default values (see `defaults\ma
     - /var/lib/minio
   ```
 
-  ```yaml
-  minio_server_cluster_nodes: []
-  ```
-
-  Set a list of nodes to create a [distributed cluster (Multi-Node Multi-Drive deployment)](https://min.io/docs/minio/linux/operations/install-deploy-manage/deploy-minio-multi-node-multi-drive.html).
-
-  In this mode, ansible will create your server datadirs (`minio_serverdata_dirs`), but use this list (`minio_server_cluster_nodes`) for the server startup.
-
-  > Multi-drive configuration requires datadirs on separate disks to satisfy Minio's distributed storage requirements.
-
-  See recommendations for using, same configuration in all nodes, sequential hostnames and local-atached storage with sequential mounts in the documentation (https://min.io/docs/minio/linux/operations/install-deploy-manage/deploy-minio-multi-node-multi-drive.html)
-
-  Example:
-
-  ```yaml
-  minio_server_datadirs:
-    - '/mnt/disk1/minio'
-    - '/mnt/disk2/minio'
-    - '/mnt/disk3/minio'
-    - '/mnt/disk4/minio'
-  minio_server_cluster_nodes:
-    - 'https://minio{1...4}.example.net:9091/mnt/disk{1...4}/minio'
-  ```
-
 - Minio client configuration
 
   Connection alias name `minio_alias` and whether validate or not SSL certificates (`minio_validate_certificates`)
@@ -92,20 +68,8 @@ Available variables are listed below along with default values (see `defaults\ma
   minio_alias: "myminio"
   ```
 
-- Configuration of TLS
-
-  To enable configuration of TLS set `minio_enable_tls` to true and provide the private key and public certificate as content loaded into `minio_key` and `minio_cert` variables.
-
-  They can be loaded from files using an ansible task like:
-
-  ```yml
-  - name: Load tls key and cert from files
-  set_fact:
-    minio_key: "{{ lookup('file','certificates/{{ inventory_hostname }}_private.key') }}"
-    minio_cert: "{{ lookup('file','certificates/{{ inventory_hostname }}_public.crt') }}"
 
   ```
-
   `minio_url` might be needed in case MinIO Server TLS certificates do not contain any IP Subject Alternative Names (SAN). See [MINIO_SERVER_URL environment variable definition](https://min.io/docs/minio/linux/reference/minio-server/minio-server.html#envvar.MINIO_SERVER_URL).
 
   ```yml
@@ -272,74 +236,14 @@ It also create some buckets and users with proper ACLs
 ```yml
 ---
 - name: Install and configure Minio Server
-  hosts: minio
+  hosts: all
   become: true
   gather_facts: true
-  vars:
-    server_hostname: minio.example.com
-    ssl_key_size: 4096
-    ssl_certificate_provider: selfsigned
-
-  pre_tasks:
-    - name: Generate self-signed SSL certificates for minio
-      include_tasks: generate_selfsigned_cert.yml
-      args:
-        apply:
-          delegate_to: localhost
-          become: false
-    - name: Load tls key and cert
-      set_fact:
-        minio_key: "{{ lookup('file','certificates/' + inventory_hostname + '_private.key') }}"
-        minio_cert: "{{ lookup('file','certificates/' + inventory_hostname + '_public.crt') }}"
-
   roles:
-    - role: ricsanfre.minio
-      minio_root_user: "miniadmin"
-      minio_root_password: "supers1cret0"
-      minio_enable_tls: true
-      minio_url: "https://{{ server_hostname }}:{{ minio_server_port }}"
-      minio_buckets:
-        - name: bucket1
-          policy: read-write
-        - name: bucket2
-          policy: read-write
-      minio_users:
-        - name: user1
-          password: supers1cret0
-          buckets_acl:
-            - name: bucket1
-              policy: read-write
-            - name: bucket2
-              policy: read-only
+    - role: ansible-role-minio
 
 ```
 
-`pre-tasks` section include tasks to generate a private key and a self-signed certificate and load them into `minio_key` and `minio_cert` variables.
-
-Where `generate_selfsigned_cert.yml` contain the tasks for generating a Private Key and SSL self-signed certificate:
-
-```yml
----
-- name: Create private certificate
-  openssl_privatekey:
-    path: "certificates/{{ inventory_hostname }}_private.key"
-    size: "{{ ssl_key_size | int }}"
-    mode: 0644
-
-- name: Create CSR
-  openssl_csr:
-    path: "certificates/{{ inventory_hostname }}_cert.csr"
-    privatekey_path: "certificates/{{ inventory_hostname }}_private.key"
-    common_name: "{{ server_hostname }}"
-
-- name: Create certificates for keystore
-  openssl_certificate:
-    csr_path: "certificates/{{ inventory_hostname }}_cert.csr"
-    path: "certificates/{{ inventory_hostname }}_public.crt"
-    privatekey_path: "certificates/{{ inventory_hostname }}_private.key"
-    provider: "{{ ssl_certificate_provider }}"
-
-```
 
 
 License
